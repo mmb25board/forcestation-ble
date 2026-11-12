@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>ForceStation BLE — NAU7802</title>
+<style>
+:root{color-scheme:dark;--bg:#090f1c;--card:#141e30;--border:#293448;--txt:#eaf0f9;--muted:#91a4bb;--accent:#59d9c1;--blue:#74a8ff;--red:#ffb47e}
+*{box-sizing:border-box}body{font:15px system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--txt);margin:0;line-height:1.45}
+main{max-width:1100px;margin:auto;padding:24px 16px 40px}h1{font-size:clamp(24px,4vw,35px);letter-spacing:-.04em;margin:0}h2{font-size:17px;margin:0 0 16px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);font-weight:800}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}.pill{border:1px solid var(--border);border-radius:20px;padding:7px 12px;color:var(--muted);font-size:12px;white-space:nowrap}
+.connectbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:-6px 0 20px}.connectbar span{font-size:12px;color:var(--muted)}.bluename{color:var(--accent)}.layout{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;min-width:0}.hero{grid-column:span 6}.metric{grid-column:span 3}.plot{grid-column:span 12}.control{grid-column:span 6}
+.name{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}.big{font-size:clamp(42px,8vw,82px);font-weight:750;line-height:1.2;letter-spacing:-.06em;font-variant-numeric:tabular-nums}.big span{font-size:.34em;letter-spacing:0;color:var(--muted)}.val{font-size:31px;letter-spacing:-.04em;font-variant-numeric:tabular-nums;margin-top:14px}.sub{color:var(--muted);font-size:12px;margin-top:4px}
+button{cursor:pointer;border:1px solid #3b5367;color:var(--txt);background:#223147;padding:10px 14px;border-radius:10px;font:600 14px system-ui;min-height:41px}button.primary{color:#041914;background:var(--accent);border-color:var(--accent)}button:hover{filter:brightness(1.15)}button:disabled{cursor:not-allowed;opacity:.4}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.formrow{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin-top:12px}.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:115px}label{font-size:12px;color:var(--muted)}input,select{width:100%;border:1px solid #394a61;border-radius:9px;background:#0b1627;color:var(--txt);padding:11px;font:inherit;min-height:41px}input[type=range]{padding:0;accent-color:var(--accent)}.hint{font-size:12px;color:var(--muted);margin-top:12px}.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}.line{display:inline-block;width:18px;height:3px;border-radius:4px;vertical-align:middle;margin-right:5px;background:var(--accent)}.line.raw{background:var(--blue)}
+.series-toggle{display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:1px solid #374c60;border-radius:9px;background:#0f1b2b;padding:7px 10px;color:var(--txt);font-size:12px;user-select:none}
+.series-toggle input[type=checkbox]{appearance:auto;flex:0 0 auto;width:17px;height:17px;min-height:0;margin:0;padding:0;accent-color:var(--accent);cursor:pointer}
+.series-toggle.raw-toggle input[type=checkbox]{accent-color:var(--blue)}
+.series-toggle .line{margin:0;width:17px;flex:0 0 17px}
+.series-toggle:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+.toprow{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+canvas{width:100%;height:340px;display:block;border-radius:10px;background:#0c1727}
+canvas.can-select{cursor:crosshair;touch-action:none}
+.analysis-layout{display:grid;grid-template-columns:minmax(0,1fr) 256px;gap:12px;align-items:stretch}
+.graph-shell{min-width:0}
+.graph-bottom{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:8px;color:var(--muted);font-size:12px}
+.chart-state{display:inline-flex;align-items:center;gap:6px}.state-dot{height:8px;width:8px;border-radius:50%;background:var(--accent)}.chart-state.frozen .state-dot{background:var(--red)}
+.stats-panel{border:1px solid #3b5065;border-radius:11px;background:#0d192a;padding:13px;min-width:0}
+.stats-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.stats-heading strong{font-size:13px}.stats-panel button{font-size:11px;min-height:30px;padding:5px 9px}
+.stats-help{font-size:12px;line-height:1.5;color:var(--muted);margin:12px 0 0}
+.stats-time{color:var(--muted);font-size:11px;margin-top:10px}
+.stat-series{padding-top:11px;margin-top:11px;border-top:1px solid #283e50}
+.stat-series h3{display:flex;align-items:center;gap:6px;font-size:12px;margin:0 0 9px;font-weight:700}
+.stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat-item{border-radius:8px;background:#13263a;padding:8px;min-width:0}
+.stat-label{color:var(--muted);font-size:10px}.stat-value{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap}.stat-value small{font-size:11px}
+.stat-series .sub{font-size:11px}
+#notice{margin-top:18px;font-size:13px;color:var(--muted);min-height:23px}.warning{color:var(--red)!important}.ok{color:var(--accent)!important}small{color:var(--muted)}
+@media(max-width:820px){.analysis-layout{grid-template-columns:minmax(0,1fr)}.stats-panel{min-height:95px}.stat-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:700px){.hero{grid-column:span 12}.metric{grid-column:span 6}.control{grid-column:span 12}.card{padding:16px}canvas{height:270px}main{padding-top:14px}}
+@media(max-width:470px){.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-value{font-size:15px}}
+
+/* Navigation temporelle et sauvegarde de sélections */
+.plot .toprow .actions{align-items:center}
+.history-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 0 3px}
+.history-controls button{min-height:33px;padding:6px 10px;font-size:12px}
+.history-controls input[type=range]{flex:1;min-width:120px;max-width:none;min-height:20px;accent-color:var(--accent)}
+.history-label{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+.analysis-save{border-top:1px solid #31445a;margin-top:14px;padding-top:13px}
+.analysis-save .actions{margin-top:10px;gap:7px}
+.analysis-save input{min-width:0;width:100%;min-height:35px;padding:7px 9px;font-size:12px}
+.analysis-save button{min-height:35px;font-size:12px}
+.saved-area{margin-top:15px;border-top:1px solid var(--border);padding-top:14px}
+.saved-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.saved-head h3{margin:0;font-size:15px}
+.saved-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:12px}
+.saved-item{border:1px solid #34475b;background:#0b1728;border-radius:11px;padding:11px}
+.saved-item .saved-name{font-size:14px;font-weight:700}
+.saved-item .saved-meta{font-size:11px;color:var(--muted);margin:5px 0 9px}
+.saved-item .saved-metrics{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}
+.saved-item .saved-metrics strong{color:var(--accent)}
+.saved-item .actions{margin-top:9px;gap:6px}
+.saved-item button{min-height:32px;padding:6px 9px;font-size:12px}
+.secondary-note{font-size:11px;color:var(--muted);margin-top:6px}
+@media(max-width:700px){.history-controls input[type=range]{order:2;flex-basis:100%}}
+
+/* Lecture du reglage ADC et mesure du debit BLE */
+.frequency-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:15px}
+.frequency-tile{border-radius:10px;border:1px solid #364b60;background:#0b1728;padding:11px 12px;min-width:0}
+.frequency-tile .freq-label{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}
+.frequency-tile .freq-number{display:block;color:var(--txt);font-size:22px;font-weight:750;line-height:1.15;font-variant-numeric:tabular-nums}
+.frequency-tile .freq-detail{display:block;color:var(--muted);font-size:11px;margin-top:6px}
+.frequency-tile.freq-verified{border-color:#31766c}.frequency-tile.freq-warning{border-color:#aa7148;background:#2e221e}
+#rateFeedback{font-size:12px;min-height:17px;margin-top:10px;color:var(--muted)}
+#rateFeedback.rate-warning{color:var(--red)}#rateFeedback.rate-ok{color:var(--accent)}
+@media(max-width:550px){.frequency-panel{grid-template-columns:1fr 1fr}.frequency-tile:last-child{grid-column:span 2}}
+</style>
+</head><body>
+<main>
+<header><div><div class="eyebrow">Mesure de force · ESP32-C3 + NAU7802</div><h1>ForceStation <span class="bluename">BLE</span></h1></div><div class="pill" id="status">Non connecté</div></header><div class="connectbar"><button id="connect" class="primary">Connecter en Bluetooth</button><span>ESP32-C3 SuperMini · aucune connexion Wi-Fi requise</span></div>
+<div class="layout">
+<section class="card hero"><div class="name">FORCE FILTRÉE</div><div class="big" id="force">— <span>N</span></div><div class="sub" id="kgf">— kgf</div><div class="actions"><button class="primary" id="tare">Faire le zéro</button><button id="resetPeak">Réinitialiser le pic</button></div></section>
+<section class="card metric"><div class="name">PIC DE FORCE</div><div class="val" id="peak">— N</div><div class="sub">Maximum positif depuis le dernier reset</div></section>
+<section class="card metric"><div class="name">SIGNAL BRUT</div><div class="val" id="raw">— N</div><div class="sub" id="counts">ADC : —</div></section>
+<section class="card plot">
+<div class="toprow"><div><h2>Courbe force / temps</h2>
+<div class="legend" aria-label="Choisir les courbes visibles">
+<label class="series-toggle" for="showFiltered"><input id="showFiltered" type="checkbox" checked><i class="line" aria-hidden="true"></i>Filtrée</label>
+<label class="series-toggle raw-toggle" for="showRaw"><input id="showRaw" type="checkbox" checked><i class="line raw" aria-hidden="true"></i>Brute</label>
+<span id="sampleCount">0 point</span></div></div>
+<div class="actions" style="margin-top:0"><button id="freeze">⏸ Stop courbe</button><button id="record" class="primary">● Démarrer enregistrement</button><button id="csv" disabled>Exporter acquisition CSV</button></div></div>
+<div class="analysis-layout">
+<div class="graph-shell">
+<canvas id="graph" aria-label="Graphique de force : après Stop, la molette parcourt l’historique et le clic gauche dessine une sélection."></canvas>
+<div class="history-controls"><button id="goStart" disabled title="Aller au début disponible">⏮ Début</button><button id="prevWindow" disabled title="Reculer de 15 secondes">◀ −15 s</button><input type="range" id="historySlider" min="0" max="1000" value="1000" disabled aria-label="Position dans l’historique"><button id="nextWindow" disabled title="Avancer de 15 secondes">+15 s ▶</button><button id="goEnd" disabled title="Revenir au dernier point figé">Fin ⏭</button></div>
+<div class="graph-bottom"><span id="graphMode" class="chart-state"><i class="state-dot"></i>Direct · 15 dernières secondes</span><span id="historyPosition" class="history-label">Historique : —</span></div>
+<div class="secondary-note" id="selectionHint">Clique sur « Stop courbe » pour naviguer et sélectionner</div>
+</div>
+<aside class="stats-panel" aria-label="Statistiques de la zone sélectionnée">
+<div class="stats-heading"><strong>Analyse de zone</strong><button id="resetSelection" disabled>Effacer la zone</button></div>
+<div id="selectionStats" aria-live="polite"><p class="stats-help">Arrête la courbe puis trace un rectangle pour analyser une zone.</p></div>
+<div class="analysis-save"><label for="selectionName">Nom de cette sélection</label><input id="selectionName" type="text" maxlength="80" placeholder="Ex. Contraction 1"><div class="actions"><button id="saveSelection" class="primary" disabled>Enregistrer la sélection</button><button id="exportSelection" disabled>Exporter cette sélection CSV</button></div></div>
+</aside></div>
+<div class="saved-area"><div class="saved-head"><h3>Sélections enregistrées (<span id="savedCount">0</span>)</h3><button id="exportAllSaved" disabled>Exporter toutes les sélections (CSV)</button></div>
+<div class="saved-list" id="savedList"><p class="stats-help">Tes sélections enregistrées apparaîtront ici, avec un bouton CSV individuel.</p></div>
+<div class="secondary-note">Sauvegarde dans la mémoire de la page uniquement : exporte tes CSV avant de fermer ou d’actualiser l’onglet. Historique conservé jusqu’à 250 000 points reçus (limite mémoire du navigateur).</div></div>
+<div class="hint">Après « Stop », tourne la molette vers le haut pour revenir dans le temps, vers le bas pour avancer. Tu peux aussi utiliser le curseur et les boutons ±15 s. Glisse avec le clic gauche pour encadrer une zone, puis « Enregistrer la sélection ». Le CSV de sélection contient chaque mesure, les deux forces, les unités, la calibration, les statistiques et les indicateurs de pertes BLE. Le Bluetooth et l’enregistrement d’acquisition continuent pendant la pause.</div>
+</section>
+<section class="card control"><h2>Calibration du capteur</h2><p class="hint">1. Décharge le capteur et clique « Faire le zéro ».<br>2. Applique une charge connue et maintiens-la stable.<br>3. Indique sa masse équivalente puis calibre.</p><div class="formrow"><div class="field"><label for="mass">Masse étalon (kg)</label><input type="number" min="0.01" step="0.01" value="1" id="mass"></div><button class="primary" id="calibrate">Calibrer avec cette charge</button></div><p class="hint" id="calstatus">Calibration : —</p></section>
+<section class="card control"><h2>Acquisition et filtrage</h2><div class="formrow"><div class="field"><label for="rate">Fréquence ADC</label><select id="rate"><option value="80">80 Hz · moins de bruit</option><option value="320">320 Hz · plus rapide</option></select></div><div class="field"><label for="tau">Lissage : <span id="tauVal">50</span> ms</label><input id="tau" type="range" min="0" max="250" step="10" value="50"></div></div><div class="actions"><button id="apply">Appliquer les réglages</button><button id="clear">Effacer la courbe</button></div>
+<div class="frequency-panel" aria-live="polite" aria-label="Etat de la frequence d'acquisition">
+  <div class="frequency-tile" id="freqDemandTile"><span class="freq-label">Fréquence demandée</span><strong class="freq-number" id="freqDemand">80 Hz</strong><span class="freq-detail">Choix dans le menu</span></div>
+  <div class="frequency-tile" id="freqActiveTile"><span class="freq-label">Fréquence active</span><strong class="freq-number" id="freqActive">—</strong><span class="freq-detail" id="freqActiveDetail">Connexion nécessaire</span></div>
+  <div class="frequency-tile" id="freqRxTile"><span class="freq-label">Mesures reçues par BLE</span><strong class="freq-number" id="freqRx">— /s</strong><span class="freq-detail" id="freqRxDetail">Débit observé sur 5 secondes</span></div>
+</div><div id="rateFeedback" role="status">Connecte le capteur pour connaître sa fréquence active.</div>
+<p class="hint">Le taux « Reçus par BLE » mesure les points effectivement arrivés au navigateur, et peut être inférieur à la fréquence ADC si le Bluetooth perd des échantillons. Le programme Arduino mis à jour permet de lire le réglage directement dans le registre du NAU7802. Le brut est calculé à partir des comptes ADC après zéro et calibration, sans lissage logiciel. Le filtré est une version adoucie du brut : 50 ms est une constante de temps (environ 63 % d’une variation brusque après 50 ms), pas une moyenne sur 50 ms. Un fort lissage peut réduire les pics très courts. Les cases au-dessus du graphique masquent seulement les courbes : le CSV garde les deux valeurs.</p></section>
+</div><div id="notice">Connecter l’ESP32-C3 en Bluetooth pour commencer.</div>
+</main>
+<script>
+'use strict';
+// ForceStation BLE — navigateur Web Bluetooth, aucun serveur Wi-Fi embarque.
+const $=id=>document.getElementById(id),G=9.80665;
+const SERVICE='f57f0000-7c5d-4a7c-9b12-5c66d2a30100';
+const DATA='f57f0001-7c5d-4a7c-9b12-5c66d2a30100';
+const COMMAND='f57f0002-7c5d-4a7c-9b12-5c66d2a30100';
+const STATE='f57f0003-7c5d-4a7c-9b12-5c66d2a30100';
+let device=null,server=null,chData=null,chCmd=null,chState=null;
+let plot=[],history=[],frozenHistory=[],capture=[],recording=false,seq=0,gaps=0;
+let firstSessionT=null;
+const MAX_HISTORY=250000,VIEW_MS=15000,MAX_SAVED=40;
+let savedSelections=[],savedCounter=0,historyTruncated=false;
+let graphPaused=false,stopEndT=0,viewEndT=0,selection=null,draftSelection=null,selectPointer=null,chartAxes=null;
+let meta={sensor:false,calibrated:false,hz:80,tau:50,offset:0,factor:0,peak:0,error:0,hwHz:null,hasReadback:false};
+let rateDirty=false,tauDirty=false,applyingRate=false,lastRequestedRate=null;
+let rxWindow=[];
+function trackReceived(n,missing){
+  const now=performance.now();
+  rxWindow.push({t:now,n,missing});
+  if(rxWindow.length>400)rxWindow.splice(0,rxWindow.length-400);
+  pruneRxWindow();
+}
+function pruneRxWindow(){
+  const threshold=performance.now()-5000;
+  while(rxWindow.length>1&&rxWindow[0].t<threshold)rxWindow.shift();
+}
+function renderFrequency(){
+  const ok=connected()&&meta.sensor, requested=Number($('rate').value);
+  const active=meta.hasReadback?meta.hwHz:meta.hz;
+  $('freqDemand').textContent=requested+' Hz';
+  $('freqActive').textContent=ok?(active?active+' Hz':'Inconnue'):'—';
+  $('freqActiveDetail').textContent=!ok?'Connexion nécessaire':meta.hasReadback
+     ?(meta.hwHz?'Registre NAU7802 lu sur la carte':'Lecture du registre indisponible')
+     :'Valeur déclarée par ESP32 · mise à jour Arduino conseillée';
+  const match=ok&&active===requested;
+  $('freqActiveTile').classList.toggle('freq-verified',match&&meta.hasReadback);
+  $('freqActiveTile').classList.toggle('freq-warning',ok&&active!==requested);
+  pruneRxWindow();
+  if(connected()&&rxWindow.length>=2){
+    const elapsed=(rxWindow[rxWindow.length-1].t-rxWindow[0].t)/1000;
+    if(elapsed>=1.5){
+      const received=rxWindow.slice(1).reduce((n,p)=>n+p.n,0);
+      const lost=rxWindow.slice(1).reduce((n,p)=>n+p.missing,0);
+      $('freqRx').textContent=(received/elapsed).toFixed(0)+' /s';
+      $('freqRxDetail').textContent='Reçus sur '+elapsed.toFixed(1)+' s · '+lost+' perdu(s)';
+    }else{
+      $('freqRx').textContent='Calcul…';$('freqRxDetail').textContent='Débit reçu, pas fréquence du capteur';
+    }
+  }else{
+    $('freqRx').textContent='— /s';$('freqRxDetail').textContent='Débit observé sur 5 secondes';
+  }
+  let msg='',kind='';
+  if(!ok)msg='Connecte le capteur pour connaître sa fréquence active.';
+  else if(applyingRate)msg='Application en cours : confirmation du NAU7802…';
+  else if(meta.error===4||meta.error===5) {msg='Réglage refusé par le NAU7802 : la fréquence demandée n’est pas confirmée (erreur '+meta.error+').';kind='rate-warning';}
+  else if(rateDirty||tauDirty) {msg='Réglages modifiés mais pas encore appliqués. Clique sur « Appliquer les réglages ».';kind='rate-warning';}
+  else if(meta.hasReadback&&active===requested){msg='✓ Fréquence confirmée par lecture du NAU7802 : '+active+' Hz.';kind='rate-ok';}
+  else if(!meta.hasReadback&&active===requested){msg='Fréquence annoncée par l’ESP32 : '+active+' Hz (lecture du registre disponible avec le nouveau .ino).';}
+  else {msg='Attention : le capteur reste à '+(active?active+' Hz':'une fréquence inconnue')+' ; '+requested+' Hz n’est pas confirmé.';kind='rate-warning';}
+  $('rateFeedback').textContent=msg;$('rateFeedback').className=kind;
+}
+let streaming=false,busy=false,stateTimer=null,drawQueued=false;
+let lastFiltered=0,lastRaw=0,lastCounts=0,packetCount=0;
+const messages={1:'Pas encore assez de mesures pour effectuer le zéro/calibrage.',2:'Commande invalide ou masse de calibration hors plage.',3:'Écart ADC trop faible : vérifier la charge et refaire le zéro.',4:'Le NAU7802 a refusé la fréquence ou la calibration interne. Le réglage précédent a été conservé.',5:'Lecture du registre de fréquence incohérente : consulter le moniteur série Arduino.'};
+function notice(s,bad=false){$('notice').textContent=s;$('notice').className=bad?'warning':'ok';}
+function connected(){return !!(device?.gatt?.connected && chCmd && chData && chState);}
+function updateStatus(){
+  const ok=connected();
+  const statusHz=meta.hasReadback?(meta.hwHz||null):meta.hz;
+  $('status').textContent=ok?(meta.sensor?'BLE connecté · '+(statusHz?statusHz+' Hz':'fréquence inconnue'):'BLE connecté · NAU7802 absent'):'Non connecté';
+  $('status').style.color=ok&&meta.sensor?'#59d9c1':'#ffb47e';
+  $('connect').textContent=ok?'Déconnecter':'Connecter en Bluetooth';
+  ['tare','resetPeak','calibrate','apply'].forEach(id=>$(id).disabled=!ok||!meta.sensor);
+  $('calstatus').textContent=meta.calibrated?'Calibration enregistrée · '+meta.factor.toFixed(2)+' comptes/N':'Non calibré : faire le zéro puis appliquer une charge connue';
+  $('force').innerHTML=meta.calibrated?lastFiltered.toFixed(1)+' <span>N</span>':'— <span>N</span>';
+  $('kgf').textContent=meta.calibrated?(lastFiltered/G).toFixed(2)+' kgf':'Calibration nécessaire';
+  $('peak').textContent=meta.calibrated?meta.peak.toFixed(1)+' N':'— N';
+  $('raw').textContent=meta.calibrated?lastRaw.toFixed(1)+' N':'— N';
+  $('counts').textContent='ADC : '+(ok?lastCounts:'—');
+  $('sampleCount').textContent=history.length.toLocaleString('fr-FR')+' points en historique'+(recording?' · '+capture.length.toLocaleString('fr-FR')+' en acquisition':'')+' · '+gaps+' manquants'+(historyTruncated?' · ancien historique purgé':'');
+  renderFrequency();
+}
+function decodeState(value){
+  const d=new DataView(value.buffer,value.byteOffset,value.byteLength);
+  if(d.byteLength<19||d.getUint8(0)!==1){notice('Protocole BLE incompatible avec cette page.',true);return;}
+  const flags=d.getUint8(1);
+  const hasReadback=d.byteLength>=20,hwCode=hasReadback?d.getUint8(19):0;
+  meta={sensor:!!(flags&1),calibrated:!!(flags&2),hz:d.getUint16(2,true),tau:d.getUint16(4,true),offset:d.getInt32(6,true),factor:d.getFloat32(10,true),peak:d.getFloat32(14,true),error:d.getUint8(18),hwHz:hwCode===1?80:hwCode===2?320:null,hasReadback};
+  if(!rateDirty&&!applyingRate) $('rate').value=String(meta.hasReadback&&meta.hwHz?meta.hwHz:meta.hz);
+  if(!tauDirty&&!applyingRate){$('tau').value=meta.tau;$('tauVal').textContent=meta.tau;}
+  if(meta.error)notice(messages[meta.error]||'Erreur retournée par l’ESP32.',true);
+  else if(!meta.sensor)notice('NAU7802 non détecté : contrôler 3V3, GND, SDA (GPIO4), SCL (GPIO7).',true);
+  updateStatus();
+}
+function decodeSamples(e){
+  const v=e.target.value;
+  const d=new DataView(v.buffer,v.byteOffset,v.byteLength);
+  if(d.byteLength<2||d.getUint8(0)!==0xA1)return;
+  const count=d.getUint8(1);
+  if(d.byteLength<2+count*16)return;
+  let received=0,missing=0;
+  for(let i=0;i<count;++i){
+    const p=2+i*16,s=d.getUint32(p,true),t=d.getUint32(p+4,true),adc=d.getInt32(p+8,true),f=d.getFloat32(p+12,true);
+    if(s<=seq)continue;
+    if(seq>0 && s>seq+1){gaps+=s-seq-1;missing+=s-seq-1;}
+    received++;seq=s;lastCounts=adc;lastFiltered=f;
+    lastRaw=meta.calibrated&&meta.factor!==0?(adc-meta.offset)/meta.factor:0;
+    const point=[s,t,adc,lastRaw,f];
+    if(firstSessionT===null)firstSessionT=t;
+    plot.push(point);
+    history.push(point);
+    if(history.length>MAX_HISTORY){history.splice(0,Math.min(5000,history.length-MAX_HISTORY));historyTruncated=true;}
+    if(recording){capture.push(point);if(capture.length>=250000){stopRecord();notice('Enregistrement arrêté à 250 000 points : exporter le CSV.',true);}}
+  }
+  if(received)trackReceived(received,missing);
+  if(plot.length){const t=plot[plot.length-1][1];while(plot.length && (t-plot[0][1])>15000)plot.shift();}
+  updateStatus();scheduleDraw();
+}
+function onDisconnect(){
+  clearInterval(stateTimer);stateTimer=null;
+  streaming=false;chData=chCmd=chState=server=null;rxWindow=[];lastRequestedRate=null;
+  if(recording)stopRecord();
+  updateStatus();
+  notice('Bluetooth déconnecté. Le dernier enregistrement reste exportable.',true);
+}
+async function connect(){
+  if(connected()){device.gatt.disconnect();return;}
+  if(!navigator.bluetooth){notice('Web Bluetooth indisponible : utiliser Chrome/Edge sur PC, ou Bluefy sur iPhone, depuis une page HTTPS.',true);return;}
+  try{
+    $('connect').disabled=true;notice('Recherche de ForceStation-C3…');
+    // Un clic utilisateur est requis pour requestDevice.
+    device=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'ForceStation'}],optionalServices:[SERVICE]});
+    device.addEventListener('gattserverdisconnected',onDisconnect);
+    server=await device.gatt.connect();
+    const svc=await server.getPrimaryService(SERVICE);
+    chData=await svc.getCharacteristic(DATA);
+    chCmd=await svc.getCharacteristic(COMMAND);
+    chState=await svc.getCharacteristic(STATE);
+    await chData.startNotifications();
+    chData.addEventListener('characteristicvaluechanged',decodeSamples);
+    await chState.startNotifications();
+    chState.addEventListener('characteristicvaluechanged',e=>decodeState(e.target.value));
+    decodeState(await chState.readValue());
+    seq=0;gaps=0;rxWindow=[];rateDirty=false;tauDirty=false;lastRequestedRate=null;plot=[];history=[];frozenHistory=[];firstSessionT=null;historyTruncated=false;lastCounts=0;lastRaw=0;lastFiltered=0;graphPaused=false;stopEndT=0;viewEndT=0;selection=null;draftSelection=null;updateGraphMode();renderSelectionStats();
+    await write('START');streaming=true;
+    stateTimer=setInterval(readState,1400);
+    notice('Connecté à ForceStation-C3. Tu peux maintenant effectuer le zéro et la calibration.');
+    updateStatus();scheduleDraw();
+  }catch(e){
+    if(device?.gatt?.connected)device.gatt.disconnect();
+    notice(e.name==='NotFoundError'?'Connexion annulée ou ESP32 non trouvé.':('Échec Bluetooth : '+e.message),true);
+    updateStatus();
+  }finally{$('connect').disabled=false;}
+}
+async function write(command){
+  if(!connected())throw Error('Pas de connexion BLE.');
+  const data=new TextEncoder().encode(command);
+  if(chCmd.writeValueWithResponse)await chCmd.writeValueWithResponse(data);
+  else await chCmd.writeValue(data);
+}
+async function readState(){try{if(connected())decodeState(await chState.readValue());}catch(e){/* Déconnexion prise en charge par l'événement GATT */}}
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function cmd(command,success,clear=false){
+  if(busy)return;
+  const isSet=command.startsWith('SET,');
+  const requestedHz=isSet?Number(command.split(',')[1]):null;
+  const requestedTau=isSet?Number(command.split(',')[2]):null;
+  if(isSet){lastRequestedRate=requestedHz;applyingRate=true;renderFrequency();}
+  busy=true;
+  try{
+    await write(command);
+    await pause(isSet?220:200);
+    await readState();
+    if(isSet){
+      // L'initialisation AFE peut durer plus que le delai BLE d'ecriture.
+      // Attendre la confirmation et non simplement 550 ms arbitraires.
+      for(let attempt=0;attempt<10;attempt++){
+        const active=meta.hasReadback?meta.hwHz:meta.hz;
+        if(meta.error|| (meta.hz===requestedHz && active===requestedHz && meta.tau===requestedTau))break;
+        await pause(250);await readState();
+      }
+    }
+    if(meta.error){notice(messages[meta.error]||'Erreur de commande',true);return;}
+    if(isSet){
+      const active=meta.hasReadback?meta.hwHz:meta.hz;
+      if(active!==requestedHz||meta.hz!==requestedHz||meta.tau!==requestedTau){
+        notice('Non confirmé : demandé '+requestedHz+' Hz, ESP32 indique '+(active||'inconnu')+' Hz et '+meta.tau+' ms.',true);return;
+      }
+      rateDirty=false;tauDirty=false;
+    }
+    if(clear){plot=[];history=[];frozenHistory=[];firstSessionT=null;historyTruncated=false;seq=0;gaps=0;rxWindow=[];graphPaused=false;selection=null;draftSelection=null;updateGraphMode();renderSelectionStats();}
+    notice(isSet?'Réglage confirmé : '+requestedHz+' Hz, lissage '+requestedTau+' ms.':success);scheduleDraw();
+  }catch(e){notice('Commande non envoyée : '+e.message,true);}
+  finally{busy=false;if(isSet)applyingRate=false;renderFrequency();}
+}
+$('connect').onclick=connect;
+$('tare').onclick=()=>cmd('TARE','Zéro enregistré (capteur sans charge).',true);
+$('resetPeak').onclick=()=>cmd('PEAK','Pic de force remis à zéro.');
+$('calibrate').onclick=()=>{
+  const kg=Number($('mass').value);
+  if(!(kg>0&&kg<=500)){notice('Saisir une masse d’étalonnage entre 0 et 500 kg.',true);return;}
+  cmd('CAL,'+kg,'Calibration enregistrée avec '+kg+' kg.',true);
+};
+$('apply').onclick=()=>cmd('SET,'+$('rate').value+','+$('tau').value,'Fréquence et lissage modifiés.',true);
+$('rate').addEventListener('change',()=>{rateDirty=true;renderFrequency();});
+$('tau').oninput=()=>{tauDirty=true;$('tauVal').textContent=$('tau').value;renderFrequency();};
+$('clear').onclick=()=>{plot=[];history=[];frozenHistory=[];firstSessionT=null;historyTruncated=false;graphPaused=false;stopEndT=0;viewEndT=0;selection=null;draftSelection=null;updateGraphMode();renderSelectionStats();scheduleDraw();notice('Historique de la courbe effacé. Les sélections déjà enregistrées restent exportables.')};
+// Les deux series sont independantes. Ne pas laisser le graphique sans courbe.
+function toggleSeries(e){
+  if(!$('showRaw').checked && !$('showFiltered').checked){
+    e.target.checked=true;
+    notice('Garde au moins une courbe affichée : brute ou filtrée.',true);
+    return;
+  }
+  renderSelectionStats();scheduleDraw();
+}
+$('showRaw').addEventListener('change',toggleSeries);
+$('showFiltered').addEventListener('change',toggleSeries);
+function stopRecord(){recording=false;$('record').textContent='● Démarrer enregistrement';$('record').classList.add('primary');$('csv').disabled=!capture.length;}
+$('record').onclick=()=>{
+  if(!connected()){notice('Connecte l’ESP32 en Bluetooth avant de démarrer.',true);return;}
+  if(!recording){recording=true;capture=[];gaps=0;$('record').textContent='■ Arrêter l’enregistrement';$('record').classList.remove('primary');$('csv').disabled=true;notice('Acquisition en cours, surveiller les points perdus.');}
+  else{stopRecord();notice(capture.length+' points sauvegardés en mémoire de la page · '+gaps+' points perdus.');}
+  updateStatus();
+};
+$('csv').onclick=()=>{
+  if(!capture.length)return;
+  const lines=['temps_ms,sequence,compteur_adc,force_brute_N,force_filtree_N,force_brute_kgf,force_filtree_kgf'];
+  const t0=capture[0][1];
+  for(const p of capture)lines.push([p[1]-t0,p[0],p[2],p[3].toFixed(5),p[4].toFixed(5),(p[3]/G).toFixed(5),(p[4]/G).toFixed(5)].join(','));
+  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='ForceStation_BLE_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+};
+const canvas=$('graph'),ctx=canvas.getContext('2d');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function lowerBound(a,t){let lo=0,hi=a.length;while(lo<hi){let mid=(lo+hi)>>1;if(a[mid][1]<t)lo=mid+1;else hi=mid;}return lo;}
+function upperBound(a,t){let lo=0,hi=a.length;while(lo<hi){let mid=(lo+hi)>>1;if(a[mid][1]<=t)lo=mid+1;else hi=mid;}return lo;}
+function rangeData(a,start,end){if(!a.length)return [];return a.slice(lowerBound(a,start),upperBound(a,end));}
+function earliestEnd(){return !frozenHistory.length?0:Math.min(stopEndT,frozenHistory[0][1]+VIEW_MS);}
+function currentWindowEnd(){return graphPaused?viewEndT:(plot.length?plot[plot.length-1][1]:VIEW_MS);}
+function displayData(){const end=currentWindowEnd();return rangeData(graphPaused?frozenHistory:plot,end-VIEW_MS,end);}
+const sessionT0=()=>firstSessionT??(frozenHistory.length?frozenHistory[0][1]:(history.length?history[0][1]:0));
+function hhmm(ms){const t=Math.max(0,Math.round(ms/1000)),m=Math.floor(t/60),s=t%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function updateHistoryControls(){
+ const available=graphPaused&&frozenHistory.length>1,lo=available?earliestEnd():0,hi=available?stopEndT:0;
+ for(const id of ['goStart','prevWindow','nextWindow','goEnd','historySlider'])$(id).disabled=!available||(hi-lo<50);
+ if(available){
+   $('historySlider').value=(hi<=lo?1000:Math.round(1000*(viewEndT-lo)/(hi-lo)));
+   $('historyPosition').textContent=hhmm(viewEndT-VIEW_MS-sessionT0())+'–'+hhmm(viewEndT-sessionT0())+' / '+hhmm(hi-sessionT0());
+ }else{
+   $('historyPosition').textContent=history.length?hhmm(history[history.length-1][1]-sessionT0())+' reçues':'Historique : —';
+ }
+}
+function updateGraphMode(){
+ $('freeze').textContent=graphPaused?'▶ Reprendre':'⏸ Stop courbe';
+ $('freeze').classList.toggle('primary',graphPaused);
+ $('graphMode').classList.toggle('frozen',graphPaused);
+ $('graphMode').innerHTML='<i class="state-dot"></i>'+(graphPaused?'Analyse arrêtée · molette = historique':'Direct · 15 dernières secondes');
+ $('selectionHint').textContent=graphPaused?'Molette / curseur pour naviguer, clic gauche pour sélectionner':'Clique sur « Stop courbe » pour naviguer et sélectionner';
+ canvas.classList.toggle('can-select',graphPaused);
+ $('resetSelection').disabled=!selection;
+ updateHistoryControls();updateSaveButtons();
+}
+$('freeze').onclick=()=>{
+ if(!graphPaused){
+   if(history.length<2){notice('Il faut au moins deux mesures avant de figer la courbe.',true);return;}
+   graphPaused=true;frozenHistory=history.slice();stopEndT=frozenHistory[frozenHistory.length-1][1];viewEndT=stopEndT;
+   selection=null;draftSelection=null;
+   notice('Courbe figée : remonte dans l’historique avec la molette, puis sélectionne une zone. Acquisition BLE maintenue.');
+ }else{
+   graphPaused=false;frozenHistory=[];selection=null;draftSelection=null;
+   notice('Affichage direct repris. Les sélections enregistrées restent disponibles.');
+ }
+ updateGraphMode();renderSelectionStats();updateStatus();scheduleDraw();
+};
+function scrollWindow(delta){
+ if(!graphPaused||!frozenHistory.length)return;
+ const lo=earliestEnd(),hi=stopEndT;
+ const next=clamp(viewEndT+delta,lo,hi);
+ if(Math.abs(next-viewEndT)<1)return;
+ viewEndT=next;selection=null;draftSelection=null;
+ updateGraphMode();renderSelectionStats();scheduleDraw();
+}
+canvas.addEventListener('wheel',e=>{
+ if(!graphPaused)return;
+ e.preventDefault();
+ // Wheel up = older, wheel down = newer; small trackpad motion remains usable.
+ scrollWindow(Math.sign(e.deltaY)*Math.max(350,Math.min(7000,Math.abs(e.deltaY)*26)));
+},{passive:false});
+$('goStart').onclick=()=>scrollWindow(earliestEnd()-viewEndT);
+$('goEnd').onclick=()=>scrollWindow(stopEndT-viewEndT);
+$('prevWindow').onclick=()=>scrollWindow(-VIEW_MS);
+$('nextWindow').onclick=()=>scrollWindow(VIEW_MS);
+$('historySlider').oninput=()=>{
+ if(!graphPaused)return;
+ const lo=earliestEnd(),hi=stopEndT,next=lo+(hi-lo)*Number($('historySlider').value)/1000;
+ if(Math.abs(next-viewEndT)>1){viewEndT=next;selection=null;draftSelection=null;renderSelectionStats();updateGraphMode();scheduleDraw();}
+};
+$('resetSelection').onclick=()=>{selection=null;draftSelection=null;updateGraphMode();renderSelectionStats();scheduleDraw();};
+function selectionGeometry(sel,ax){
+ const x=v=>ax.L+ax.W*(v-ax.startT)/VIEW_MS;
+ const y=v=>ax.T+ax.H*(ax.mx-v)/(ax.mx-ax.mn);
+ return {left:clamp(x(sel.tMin),ax.L,ax.L+ax.W),right:clamp(x(sel.tMax),ax.L,ax.L+ax.W),top:clamp(y(sel.nMax),ax.T,ax.T+ax.H),bottom:clamp(y(sel.nMin),ax.T,ax.T+ax.H)};
+}
+function pointToData(px,py,ax){return {t:ax.startT+VIEW_MS*(px-ax.L)/ax.W,n:ax.mx-(ax.mx-ax.mn)*(py-ax.T)/ax.H};}
+function clampPoint(e){const rect=canvas.getBoundingClientRect(),ax=chartAxes;return {x:clamp(e.clientX-rect.left,ax.L,ax.L+ax.W),y:clamp(e.clientY-rect.top,ax.T,ax.T+ax.H)};}
+function pointInside(e){const rect=canvas.getBoundingClientRect(),ax=chartAxes,x=e.clientX-rect.left,y=e.clientY-rect.top;return x>=ax.L&&x<=ax.L+ax.W&&y>=ax.T&&y<=ax.T+ax.H;}
+canvas.addEventListener('pointerdown',e=>{
+ if(!graphPaused||!chartAxes||e.button!==0||!pointInside(e))return;
+ e.preventDefault();const p=clampPoint(e);selectPointer=e.pointerId;
+ draftSelection={a:p,b:p};selection=null;canvas.setPointerCapture(e.pointerId);renderSelectionStats();updateSaveButtons();scheduleDraw();
+});
+canvas.addEventListener('pointermove',e=>{if(selectPointer!==e.pointerId||!draftSelection||!chartAxes)return;e.preventDefault();draftSelection.b=clampPoint(e);scheduleDraw();});
+function finishSelection(e){
+ if(selectPointer!==e.pointerId||!draftSelection||!chartAxes)return;
+ draftSelection.b=clampPoint(e);const {a,b}=draftSelection;
+ if(Math.abs(a.x-b.x)>=6&&Math.abs(a.y-b.y)>=6){
+   const u=pointToData(a.x,a.y,chartAxes),v=pointToData(b.x,b.y,chartAxes);
+   selection={tMin:Math.min(u.t,v.t),tMax:Math.max(u.t,v.t),nMin:Math.min(u.n,v.n),nMax:Math.max(u.n,v.n)};
+ }else selection=null;
+ draftSelection=null;selectPointer=null;
+ if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
+ renderSelectionStats();updateGraphMode();scheduleDraw();
+}
+canvas.addEventListener('pointerup',finishSelection);
+canvas.addEventListener('pointercancel',e=>{if(selectPointer!==e.pointerId)return;selectPointer=null;draftSelection=null;scheduleDraw();});
+function withinZone(p,index,sel){return p[1]>=sel.tMin&&p[1]<=sel.tMax&&p[index]>=sel.nMin&&p[index]<=sel.nMax;}
+function selectionStats(data,index,sel){
+ let count=0,min=Infinity,max=-Infinity,sum=0,sum2=0,minPoint=null,maxPoint=null,impulse=0,prev=null;
+ let missing=0;
+ for(const p of data){
+   if(!withinZone(p,index,sel)||!Number.isFinite(p[index])){prev=null;continue;}
+   const v=p[index];++count;sum+=v;sum2+=v*v;
+   if(v<min){min=v;minPoint=p;}if(v>max){max=v;maxPoint=p;}
+   if(prev){const dt=p[1]-prev[1],loss=p[0]-prev[0]-1;
+     if(loss>0)missing+=loss;
+     // Do not integrate across long pauses or sequence gaps.
+     if(dt>0&&dt<Math.max(150,4000/Math.max(1,meta.hz))&&loss===0)impulse+=(prev[index]+v)*dt/2000;
+   }
+   prev=p;
+ }
+ if(!count)return null;
+ const average=sum/count;
+ return {count,min,max,delta:max-min,average,std:Math.sqrt(Math.max(0,sum2/count-average*average)),rms:Math.sqrt(sum2/count),impulse,missing,minPoint,maxPoint};
+}
+const fmtForce=n=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:1});
+function seriesStatsHtml(label,color,st){
+ if(!st)return `<div class="stat-series"><h3><i class="line" style="background:${color}"></i>${label}</h3><p class="stats-help">Aucun point de cette courbe dans le rectangle.</p></div>`;
+ const box=(k,v,unit='N')=>`<div class="stat-item"><div class="stat-label">${k}</div><div class="stat-value">${fmtForce(v)} <small>${unit}</small></div></div>`;
+ return `<div class="stat-series"><h3><i class="line" style="background:${color}"></i>${label}</h3><div class="stat-grid">${box('Minimum',st.min)}${box('Maximum',st.max)}${box('Écart max − min',st.delta)}${box('Moyenne',st.average)}${box('Écart-type',st.std)}${box('Impulsion (contiguë)',st.impulse,'N·s')}</div><div class="sub">${st.count.toLocaleString('fr-FR')} points · RMS ${fmtForce(st.rms)} N · max à +${((st.maxPoint[1]-selection.tMin)/1000).toFixed(2).replace('.',',')} s</div></div>`;
+}
+function selectedRows(){return !selection?[]:rangeData(frozenHistory,selection.tMin,selection.tMax);}
+function renderSelectionStats(){
+ if(!graphPaused){$('selectionStats').innerHTML='<p class="stats-help">Arrête la courbe puis trace un rectangle avec le clic gauche pour analyser une zone.</p>';updateSaveButtons();return;}
+ if(!selection){$('selectionStats').innerHTML='<p class="stats-help">Remonte avec la molette ou le curseur, puis trace un rectangle sur la contraction intéressante.</p>';updateSaveButtons();return;}
+ const data=selectedRows(),duration=(selection.tMax-selection.tMin)/1000;
+ let html=`<div class="stats-time">Zone : ${duration.toFixed(2).replace('.',',')} s · ${data.length.toLocaleString('fr-FR')} points dans la fenêtre temporelle</div>`;
+ if($('showFiltered').checked)html+=seriesStatsHtml('Force filtrée','#59d9c1',selectionStats(data,4,selection));
+ if($('showRaw').checked)html+=seriesStatsHtml('Force brute','#74a8ff',selectionStats(data,3,selection));
+ $('selectionStats').innerHTML=html;
+ updateSaveButtons();
+}
+function updateSaveButtons(){
+ const rows=graphPaused&&selection?selectedRows():[];
+ const canSave=!!(rows.length&&rows.some(p=>($('showRaw').checked&&withinZone(p,3,selection))||($('showFiltered').checked&&withinZone(p,4,selection)))&&savedSelections.length<MAX_SAVED);
+ $('saveSelection').disabled=!canSave;
+ $('exportSelection').disabled=!canSave;
+ $('resetSelection').disabled=!selection;
+ $('exportAllSaved').disabled=!savedSelections.length;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function makeSaved(persist=false){
+ if(!graphPaused||!selection)return null;
+ const rows=selectedRows();if(!rows.some(p=>($('showRaw').checked&&withinZone(p,3,selection))||($('showFiltered').checked&&withinZone(p,4,selection))))return null;
+ const n=persist?++savedCounter:savedCounter+1;
+ const name=$('selectionName').value.trim().slice(0,80)||'Sélection '+n;
+ return {id:n,name,savedAt:new Date().toISOString(),window:{...selection},rows:rows.map(p=>p.slice()),
+  calibrated:meta.calibrated,hz:meta.hz,tau:meta.tau,offset:meta.offset,factor:meta.factor,
+  shownRaw:$('showRaw').checked,shownFiltered:$('showFiltered').checked,
+  raw:selectionStats(rows,3,selection),filtered:selectionStats(rows,4,selection),
+  gaps:rows.reduce((s,p,i)=>s+(i&&p[0]>rows[i-1][0]?Math.max(0,p[0]-rows[i-1][0]-1):0),0)};
+}
+function renderSaved(){
+ $('savedCount').textContent=savedSelections.length;
+ if(!savedSelections.length){$('savedList').innerHTML='<p class="stats-help">Aucune sélection enregistrée pour l’instant.</p>';updateSaveButtons();return;}
+ $('savedList').innerHTML=savedSelections.map(s=>{
+  const filt=s.filtered,raw=s.raw,t=((s.window.tMax-s.window.tMin)/1000).toFixed(2).replace('.',',');
+  return `<div class="saved-item" data-id="${s.id}"><div class="saved-name">${esc(s.name)}</div><div class="saved-meta">#${s.id} · ${t} s · ${s.rows.length.toLocaleString('fr-FR')} mesures · ${s.hz} Hz · lissage ${s.tau} ms</div><div class="saved-metrics"><span>Max filtré <strong>${filt?fmtForce(filt.max)+' N':'—'}</strong></span><span>Max brut <strong>${raw?fmtForce(raw.max)+' N':'—'}</strong></span></div><div class="actions"><button data-act="export" data-id="${s.id}" class="primary">Exporter CSV complet</button><button data-act="delete" data-id="${s.id}">Supprimer</button></div></div>`;
+ }).join('');
+ updateSaveButtons();
+}
+$('saveSelection').onclick=()=>{
+ const saved=makeSaved(true);if(!saved){notice('Sélectionne d’abord une zone contenant des mesures.',true);return;}
+ savedSelections.push(saved);renderSaved();$('selectionName').value='';
+ notice('« '+saved.name+' » enregistrée en mémoire. Exporte son CSV avant de fermer l’onglet.');
+};
+$('exportSelection').onclick=()=>{const s=makeSaved();if(s)exportSelections([s]);};
+$('savedList').addEventListener('click',e=>{
+ const btn=e.target.closest('button[data-act]');if(!btn)return;
+ const id=Number(btn.dataset.id),s=savedSelections.find(v=>v.id===id);if(!s)return;
+ if(btn.dataset.act==='export')exportSelections([s]);
+ else if(btn.dataset.act==='delete'){savedSelections=savedSelections.filter(v=>v.id!==id);renderSaved();notice('Sélection « '+s.name+' » supprimée de la liste.');}
+});
+$('exportAllSaved').onclick=()=>{if(savedSelections.length)exportSelections(savedSelections);};
+function csvQuote(v){
+ let s=String(v??'');
+ if(/^[=+@\-\t\r]/.test(s)&&!/^[-+]?[0-9]+([.,][0-9]+)?$/.test(s))s="'"+s;
+ return /[;"\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+const dec=(v,d=4)=>Number.isFinite(v)?Number(v).toFixed(d).replace('.',','):'';
+function csvLine(a){return a.map(csvQuote).join(';');}
+const statHeaders=['min_N','max_N','max_moins_min_N','moyenne_N','ecart_type_N','rms_N','impulsion_Ns','nb_points','t_min_ms','t_max_ms'];
+function statsValues(st){return st?[dec(st.min),dec(st.max),dec(st.delta),dec(st.average),dec(st.std),dec(st.rms),dec(st.impulse),st.count,st.minPoint[1],st.maxPoint[1]]:['','','','','','','','','',''];}
+const commonHeaders=['id_selection','nom_selection','sauvegarde_UTC','frequence_Hz','lissage_ms','calibre','zero_ADC','coefficient_comptes_par_N','zone_debut_ms_esp32','zone_fin_ms_esp32','zone_force_min_N','zone_force_max_N','duree_zone_ms','courbe_brute_visible','courbe_filtree_visible','pertes_sequence_dans_fenetre'];
+const pointHeaders=['index_dans_selection','sequence','temps_ESP32_ms','temps_relatif_zone_ms','delta_t_ms','compteur_ADC','force_brute_N','force_filtree_N','force_brute_kgf','force_filtree_kgf','brut_dans_rectangle','filtre_dans_rectangle','pertes_sequence_avant_ce_point'];
+function exportSelections(list){
+ if(!list.length)return;
+ const header=[...commonHeaders,...statHeaders.map(s=>'brut_'+s),...statHeaders.map(s=>'filtre_'+s),...pointHeaders];
+ let lines=['sep=;',csvLine(header)];
+ for(const s of list){
+  const z=s.window;
+  const meta=[s.id,s.name,s.savedAt,s.hz,s.tau,s.calibrated?1:0,s.offset,dec(s.factor,8),dec(z.tMin,2),dec(z.tMax,2),dec(z.nMin),dec(z.nMax),dec(z.tMax-z.tMin,2),s.shownRaw?1:0,s.shownFiltered?1:0,s.gaps];
+  for(let i=0;i<s.rows.length;i++){
+   const p=s.rows[i],prev=i?s.rows[i-1]:null;
+   const row=[i+1,p[0],p[1],dec(p[1]-z.tMin,2),prev?p[1]-prev[1]:'',p[2],dec(p[3]),dec(p[4]),dec(p[3]/G),dec(p[4]/G),withinZone(p,3,z)?1:0,withinZone(p,4,z)?1:0,prev?Math.max(0,p[0]-prev[0]-1):0];
+   lines.push(csvLine([...meta,...statsValues(s.raw),...statsValues(s.filtered),...row]));
+  }
+ }
+ const csv='\ufeff'+lines.join('\r\n');
+ const filename=list.length===1?'ForceStation_selection_'+String(list[0].id).padStart(2,'0'):'ForceStation_toutes_selections';
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=filename+'_'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+ notice(list.length===1?'CSV complet exporté pour « '+list[0].name+' ».':'CSV complet exporté pour '+list.length+' sélections.');
+}
+function scheduleDraw(){if(!drawQueued){drawQueued=true;requestAnimationFrame(()=>{drawQueued=false;draw();});}}
+function draw(){
+ const r=canvas.getBoundingClientRect(),w=r.width,h=r.height;if(!w||!h)return;
+ const dpr=Math.min(window.devicePixelRatio||1,2);
+ if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const L=55,R=14,T=14,B=29,W=w-L-R,H=h-T-B;
+ const displayRaw=$('showRaw').checked,displayFiltered=$('showFiltered').checked;
+ const samples=displayData(),endT=currentWindowEnd(),startT=endT-VIEW_MS;
+ let mn=0,mx=10;
+ for(const p of samples){
+  if(displayRaw&&Number.isFinite(p[3])){mn=Math.min(mn,p[3]);mx=Math.max(mx,p[3]);}
+  if(displayFiltered&&Number.isFinite(p[4])){mn=Math.min(mn,p[4]);mx=Math.max(mx,p[4]);}
+ }
+ const pad=Math.max(3,(mx-mn)*.12);mn-=pad;mx+=pad;
+ chartAxes={L,R,T,B,W,H,mn,mx,startT,w,h};
+ ctx.lineWidth=1;ctx.strokeStyle='#2d3d50';ctx.fillStyle='#8297ae';ctx.font='11px system-ui';ctx.textAlign='right';
+ for(let i=0;i<=4;i++){const y=T+H*i/4;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(w-R,y);ctx.stroke();ctx.fillText((mx-(mx-mn)*i/4).toFixed(0),L-8,y+4);}
+ ctx.textAlign='center';for(let i=0;i<=3;i++)ctx.fillText(hhmm(startT-sessionT0()+VIEW_MS*i/3),L+W*i/3,h-8);
+ if(samples.length>=2){
+   const step=Math.max(1,Math.floor(samples.length/1800));
+   function line(index,color,width){
+     ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=width;let first=true;
+     for(let i=0;i<samples.length;i+=step){const p=samples[i],x=L+W*(p[1]-startT)/VIEW_MS,y=T+H*(mx-p[index])/(mx-mn);if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);}
+     const p=samples[samples.length-1];ctx.lineTo(L+W*(p[1]-startT)/VIEW_MS,T+H*(mx-p[index])/(mx-mn));ctx.stroke();
+   }
+   if(displayRaw)line(3,'#74a8ff',1.2);
+   if(displayFiltered)line(4,'#59d9c1',2);
+ }
+ updateHistoryControls();
+ if(!graphPaused)return;
+ let rect=null;
+ if(draftSelection){rect={left:Math.min(draftSelection.a.x,draftSelection.b.x),right:Math.max(draftSelection.a.x,draftSelection.b.x),top:Math.min(draftSelection.a.y,draftSelection.b.y),bottom:Math.max(draftSelection.a.y,draftSelection.b.y)};}
+ else if(selection)rect=selectionGeometry(selection,chartAxes);
+ if(rect){ctx.fillStyle='rgba(100,170,255,.16)';ctx.fillRect(rect.left,rect.top,Math.max(0,rect.right-rect.left),Math.max(0,rect.bottom-rect.top));ctx.lineWidth=1.5;ctx.strokeStyle='#bdd7ff';ctx.setLineDash([6,4]);ctx.strokeRect(rect.left,rect.top,Math.max(0,rect.right-rect.left),Math.max(0,rect.bottom-rect.top));ctx.setLineDash([]);}
+ if(!selection)return;
+ const selectionSamples=selectedRows();
+ function marks(index,color){
+   const st=selectionStats(selectionSamples,index,selection);if(!st)return;
+   for(const p of [st.minPoint,st.maxPoint]){
+     const x=L+W*(p[1]-startT)/VIEW_MS,y=T+H*(mx-p[index])/(mx-mn);
+     if(x<L||x>L+W)continue;
+     ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.lineWidth=1.4;ctx.strokeStyle='#081321';ctx.stroke();
+   }
+ }
+ if(displayRaw)marks(3,'#74a8ff');
+ if(displayFiltered)marks(4,'#59d9c1');
+}
+window.addEventListener('resize',scheduleDraw);
+updateStatus();updateGraphMode();renderSelectionStats();renderSaved();scheduleDraw();
+if(!navigator.bluetooth)notice('Utiliser Chrome/Edge sur Windows ou Bluefy sur iPhone depuis GitHub Pages (HTTPS).',true);
+else notice('Clique « Connecter en Bluetooth » pour rechercher ton ESP32-C3.');
+
+renderFrequency();
+</script></body></html>
